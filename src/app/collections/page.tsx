@@ -34,6 +34,7 @@ const CollectionsPage = () => {
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [isVisible, setIsVisible] = useState(false);
   const collectionsRef = useRef<HTMLDivElement>(null);
+  const productsRef = useRef<HTMLDivElement>(null);
 
   // WhatsApp number to send messages to (replace with your actual number)
   const whatsappNumber = "+2347030367949"; // Replace with your actual WhatsApp number
@@ -66,6 +67,13 @@ const CollectionsPage = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Scroll to products section when a collection is selected
+  useEffect(() => {
+    if (activeCollection && productsRef.current) {
+      productsRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [activeCollection]);
+
   // Collections data
 
   // Handle product selection
@@ -97,25 +105,40 @@ const CollectionsPage = () => {
       setIsModalOpen(false);
     }
   };
-  //   console.log(collections);
+
+  // Add a useEffect to handle the add to cart action when selectedProduct changes
+  useEffect(() => {
+    if (selectedProduct && !isModalOpen) {
+      // This will run when a product is selected from the quick action button
+      handleAddToCart();
+    }
+  }, [selectedProduct, isModalOpen]);
 
   // Filter products based on search and category
-  const filteredCollections = collections.map((collection) => {
-    const filteredProducts = collection.products.filter((product) => {
-      const matchesSearch =
-        product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory =
-        filterCategory === "all" ||
-        product.category.toLowerCase() === filterCategory.toLowerCase();
-      return matchesSearch && matchesCategory;
-    });
+  const filteredCollections = collections
+    .map((collection) => {
+      const filteredProducts = collection.products.filter((product) => {
+        // Search filter - check if product title or description contains the search query
+        const matchesSearch =
+          searchQuery === "" ||
+          product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          product.description.toLowerCase().includes(searchQuery.toLowerCase());
 
-    return {
-      ...collection,
-      products: filteredProducts,
-    };
-  });
+        // Category filter - check if product category matches the selected category
+        const matchesCategory =
+          filterCategory === "all" ||
+          product.category.toLowerCase() === filterCategory.toLowerCase();
+
+        return matchesSearch && matchesCategory;
+      });
+
+      // Return the collection with filtered products
+      return {
+        ...collection,
+        products: filteredProducts,
+      };
+    })
+    .filter((collection) => collection.products.length > 0); // Only show collections with products after filtering
 
   // Get unique categories for filter
   const categories = [
@@ -214,6 +237,73 @@ const CollectionsPage = () => {
               </svg>
             </div>
           </div>
+
+          {/* Active Filters Indicator */}
+          {(searchQuery !== "" || filterCategory !== "all") && (
+            <div className="flex flex-wrap justify-center gap-2 mb-8 animate-fade-in">
+              {searchQuery !== "" && (
+                <div className="bg-white/20 backdrop-blur-md text-white px-3 py-1 rounded-full flex items-center">
+                  <span className="mr-2">
+                    Search: &ldquo;{searchQuery}&rdquo;
+                  </span>
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="text-white/70 hover:text-white"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              )}
+              {filterCategory !== "all" && (
+                <div className="bg-white/20 backdrop-blur-md text-white px-3 py-1 rounded-full flex items-center">
+                  <span className="mr-2">
+                    Category:{" "}
+                    {filterCategory.charAt(0).toUpperCase() +
+                      filterCategory.slice(1)}
+                  </span>
+                  <button
+                    onClick={() => setFilterCategory("all")}
+                    className="text-white/70 hover:text-white"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              )}
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  setFilterCategory("all");
+                }}
+                className="bg-[var(--color-accent)] text-white px-3 py-1 rounded-full text-sm hover:bg-[var(--color-accent-light)] transition-colors"
+              >
+                Clear All Filters
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
@@ -223,297 +313,392 @@ const CollectionsPage = () => {
         className="py-16 px-4 bg-gradient-to-b from-transparent via-[var(--color-neutral)]/10 to-[var(--color-neutral-light)]"
       >
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-10">
-            {filteredCollections.map((collection, index) => (
-              <div
-                key={index}
-                className={`relative group perspective-1000 ${
-                  isVisible
-                    ? "opacity-100 translate-y-0 rotate-0"
-                    : "opacity-0 translate-y-10 rotate-3"
-                } transition-all duration-700 ease-out hover:z-10`}
-                style={{
-                  animationDelay: `${index * 0.1}s`,
-                  transform: `rotate(${index % 2 === 0 ? "2deg" : "-2deg"})`,
-                }}
+          {filteredCollections.length === 0 ? (
+            <div className="text-center py-12">
+              <svg
+                className="w-16 h-16 text-gray-300 mx-auto mb-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <h3 className="text-xl font-semibold text-[var(--color-primary)] mb-2">
+                No collections found
+              </h3>
+              <p className="text-[var(--color-text-secondary)] mb-6">
+                Try adjusting your search or filter criteria
+              </p>
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  setFilterCategory("all");
+                }}
+                className="bg-[var(--color-primary)] text-white px-6 py-2 rounded-lg font-medium hover:bg-[var(--color-primary-dark)] transition-colors"
+              >
+                Clear Filters
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-10">
+              {filteredCollections.map((collection, index) => (
                 <div
-                  className={`relative bg-white rounded-2xl shadow-lg overflow-hidden transform transition-all duration-500 
-                    hover:shadow-[0_20px_50px_rgba(var(--color-accent-rgb),0.3)] hover:-translate-y-2 hover:scale-105 
-                    ${
-                      activeCollection === collection.id
-                        ? "ring-4 ring-[var(--color-accent)] scale-105"
-                        : ""
-                    }
-                    before:content-[''] before:absolute before:inset-0 before:bg-gradient-to-r before:from-[var(--color-accent)]/0 
-                    before:to-[var(--color-primary)]/0 before:opacity-0 before:transition-opacity before:duration-300 
-                    hover:before:opacity-20 cursor-pointer group/card`}
-                  onClick={() => handleCollectionClick(collection.id)}
+                  key={index}
+                  className={`relative group perspective-1000 ${
+                    isVisible
+                      ? "opacity-100 translate-y-0 rotate-0"
+                      : "opacity-0 translate-y-10 rotate-3"
+                  } transition-all duration-700 ease-out hover:z-10`}
+                  style={{
+                    animationDelay: `${index * 0.1}s`,
+                    transform: `rotate(${index % 2 === 0 ? "2deg" : "-2deg"})`,
+                  }}
                 >
-                  <div className="relative h-[400px] sm:h-[450px] overflow-hidden">
-                    <div className="absolute inset-0 bg-[var(--color-primary)]/10 mix-blend-overlay z-10"></div>
-                    <Image
-                      src={collection.image}
-                      alt={collection.name}
-                      fill
-                      className="object-cover transition-all duration-700 group-hover/card:scale-110 group-hover/card:rotate-2"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-500"></div>
+                  <div
+                    className={`relative bg-white rounded-2xl shadow-lg overflow-hidden transform transition-all duration-500 
+                      hover:shadow-[0_20px_50px_rgba(var(--color-accent-rgb),0.3)] hover:-translate-y-2 hover:scale-105 
+                      ${
+                        activeCollection === collection.id
+                          ? "ring-4 ring-[var(--color-accent)] scale-105"
+                          : ""
+                      }
+                      before:content-[''] before:absolute before:inset-0 before:bg-gradient-to-r before:from-[var(--color-accent)]/0 
+                      before:to-[var(--color-primary)]/0 before:opacity-0 before:transition-opacity before:duration-300 
+                      hover:before:opacity-20 cursor-pointer group/card`}
+                    onClick={() => handleCollectionClick(collection.id)}
+                  >
+                    <div className="relative h-[400px] sm:h-[450px] overflow-hidden">
+                      <div className="absolute inset-0 bg-[var(--color-primary)]/10 mix-blend-overlay z-10"></div>
+                      <Image
+                        src={collection.image}
+                        alt={collection.name}
+                        fill
+                        className="object-cover transition-all duration-700 group-hover/card:scale-110 group-hover/card:rotate-2"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-500"></div>
 
-                    {/* Collection Badge */}
-                    <div
-                      className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm text-[var(--color-primary)] px-3 py-1 rounded-full 
-                      text-sm font-medium shadow-lg transform -rotate-2"
-                    >
-                      {collection.products.length} Pieces
-                    </div>
-
-                    {/* Fun Badge */}
-                    <div
-                      className="absolute top-4 right-4 bg-[var(--color-accent)] text-white px-4 py-1.5 rounded-full 
-                      transform rotate-2 opacity-0 group-hover/card:opacity-100 transition-all duration-300 delay-100 
-                      shadow-lg text-sm font-semibold"
-                    >
-                      View Collection
-                    </div>
-
-                    <div className="absolute bottom-0 left-0 right-0 p-8 transform translate-y-4 group-hover/card:translate-y-0 transition-transform duration-500">
-                      <h3
-                        className="text-3xl font-bold text-white mb-4 transform group-hover/card:scale-105 transition-transform duration-300 
-                        drop-shadow-lg"
+                      {/* Collection Badge */}
+                      <div
+                        className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm text-[var(--color-primary)] px-3 py-1 rounded-full 
+                        text-sm font-medium shadow-lg transform -rotate-2"
                       >
-                        {collection.name}
-                      </h3>
-                      <p
-                        className="text-white/90 text-base transform group-hover/card:translate-x-2 transition-transform duration-300 
-                        line-clamp-2 mb-6"
-                      >
-                        {collection.description}
-                      </p>
+                        {collection.products.length} Pieces
+                      </div>
 
-                      {/* Interactive Elements */}
-                      <div className="flex items-center gap-4 opacity-0 group-hover/card:opacity-100 transition-opacity duration-500 delay-100">
-                        <span
-                          className="inline-flex items-center text-[var(--color-accent)] text-sm bg-white/10 backdrop-blur-sm 
-                          px-3 py-1 rounded-full"
+                      {/* Fun Badge */}
+                      <div
+                        className="absolute top-4 right-4 bg-[var(--color-accent)] text-white px-4 py-1.5 rounded-full 
+                        transform rotate-2 opacity-0 group-hover/card:opacity-100 transition-all duration-300 delay-100 
+                        shadow-lg text-sm font-semibold"
+                      >
+                        View Collection
+                      </div>
+
+                      <div className="absolute bottom-0 left-0 right-0 p-8 transform translate-y-4 group-hover/card:translate-y-0 transition-transform duration-500">
+                        <h3
+                          className="text-3xl font-bold text-white mb-4 transform group-hover/card:scale-105 transition-transform duration-300 
+                          drop-shadow-lg"
                         >
-                          <svg
-                            className="w-4 h-4 mr-1"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
+                          {collection.name}
+                        </h3>
+                        <p
+                          className="text-white/90 text-base transform group-hover/card:translate-x-2 transition-transform duration-300 
+                          line-clamp-2 mb-6"
+                        >
+                          {collection.description}
+                        </p>
+
+                        {/* Interactive Elements */}
+                        <div className="flex items-center gap-4 opacity-0 group-hover/card:opacity-100 transition-opacity duration-500 delay-100">
+                          <span
+                            className="inline-flex items-center text-[var(--color-accent)] text-sm bg-white/10 backdrop-blur-sm 
+                            px-3 py-1 rounded-full"
                           >
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                          </svg>
-                          Featured Collection
-                        </span>
-                        <span className="text-white/90 text-sm bg-white/10 backdrop-blur-sm px-3 py-1 rounded-full">
-                          Starting from{" "}
-                          {formatPrice(collection.products[0].price)}
-                        </span>
+                            <svg
+                              className="w-4 h-4 mr-1"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                            </svg>
+                            Featured Collection
+                          </span>
+                          <span className="text-white/90 text-sm bg-white/10 backdrop-blur-sm px-3 py-1 rounded-full">
+                            Starting from{" "}
+                            {formatPrice(collection.products[0].price)}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Products Section */}
       {activeCollection && (
-        <section className="py-16 px-4 bg-[var(--color-neutral-light)]">
+        <section
+          ref={productsRef}
+          className="py-16 mt-16 lg:mt-4 px-4 bg-[var(--color-primary)]/10"
+        >
           <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-4xl md:text-5xl font-bold mb-4 text-[var(--color-primary)] relative inline-block">
-                {
-                  filteredCollections.find((c) => c.id === activeCollection)
-                    ?.name
-                }
-                <span className="absolute bottom-0 left-0 w-full h-1 bg-[var(--color-accent)] transform scale-x-0 transition-transform duration-300 group-hover:scale-x-100"></span>
+            {/* Back to Collections Button - Mobile Friendly */}
+            <div className="mb-8 flex justify-between items-center">
+              <button
+                //scroll to top of page
+                onClick={() => {
+                  setActiveCollection(null);
+                  window.scrollTo({ top: 100, behavior: "smooth" });
+                }}
+                className="flex items-center text-[var(--color-primary)]  hover:text-[var(--color-accent)] transition-colors"
+              >
+                <svg
+                  className="w-5 h-5 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+                Back to Collections
+              </button>
+              {/* Collection Title */}
+              <h2 className="text-2xl md:text-3xl font-bold text-[var(--color-primary)]">
+                {filteredCollections.find((c) => c.id === activeCollection)
+                  ?.name ||
+                  collections.find((c) => c.id === activeCollection)?.name}
               </h2>
-              <p className="text-[var(--color-text-secondary)] text-lg max-w-2xl mx-auto">
-                {
-                  filteredCollections.find((c) => c.id === activeCollection)
-                    ?.description
-                }
-              </p>
+              <div className="w-5 h-5"></div> {/* Spacer for alignment */}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
-              {filteredCollections
-                .find((c) => c.id === activeCollection)
-                ?.products.map((product, index) => (
-                  <div
-                    key={product.id}
-                    className={`group/product cursor-pointer ${
-                      isVisible
-                        ? "opacity-100 translate-y-0"
-                        : "opacity-0 translate-y-10"
-                    }`}
-                    style={{ animationDelay: `${index * 0.1}s` }}
-                    onClick={() => handleProductClick(product)}
-                  >
+            <p className="text-[var(--color-text-secondary)] text-lg max-w-2xl mb-8">
+              {filteredCollections.find((c) => c.id === activeCollection)
+                ?.description ||
+                collections.find((c) => c.id === activeCollection)?.description}
+            </p>
+
+            {filteredCollections.find((c) => c.id === activeCollection)
+              ?.products.length === 0 ? (
+              <div className="text-center py-12">
+                <svg
+                  className="w-16 h-16 text-gray-300 mx-auto mb-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <h3 className="text-xl font-semibold text-[var(--color-primary)] mb-2">
+                  No products found
+                </h3>
+                <p className="text-[var(--color-text-secondary)] mb-6">
+                  Try adjusting your search or filter criteria
+                </p>
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                    setFilterCategory("all");
+                  }}
+                  className="bg-[var(--color-primary)] text-white px-6 py-2 rounded-lg font-medium hover:bg-[var(--color-primary-dark)] transition-colors"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
+                {filteredCollections
+                  .find((c) => c.id === activeCollection)
+                  ?.products.map((product, index) => (
                     <div
-                      className="bg-white rounded-2xl shadow-lg overflow-hidden transform hover:-translate-y-2 transition-all duration-300 
-                      hover:shadow-2xl relative group-hover/product:ring-2 group-hover/product:ring-[var(--color-accent)]"
+                      key={product.id}
+                      className={`group/product cursor-pointer ${
+                        isVisible
+                          ? "opacity-100 translate-y-0"
+                          : "opacity-0 translate-y-10"
+                      }`}
+                      style={{ animationDelay: `${index * 0.1}s` }}
+                      onClick={() => handleProductClick(product)}
                     >
-                      <div className="relative h-[500px] overflow-hidden">
-                        <Image
-                          src={product.image}
-                          alt={product.title}
-                          fill
-                          className="object-cover transition-all duration-500 group-hover/product:scale-110"
-                        />
-                        <div
-                          className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent 
-                          opacity-0 group-hover/product:opacity-100 transition-opacity duration-300"
-                        ></div>
+                      <div
+                        className="bg-white rounded-2xl shadow-lg overflow-hidden transform hover:-translate-y-2 transition-all duration-300 
+                        hover:shadow-2xl relative group-hover/product:ring-2 group-hover/product:ring-[var(--color-accent)]"
+                      >
+                        <div className="relative h-[500px] overflow-hidden">
+                          <Image
+                            src={product.image}
+                            alt={product.title}
+                            fill
+                            className="object-cover transition-all duration-500 group-hover/product:scale-110"
+                          />
+                          <div
+                            className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent 
+                            opacity-0 group-hover/product:opacity-100 transition-opacity duration-300"
+                          ></div>
 
-                        {/* Product Badges */}
-                        <div className="absolute top-4 left-4 flex flex-col gap-2">
-                          {product.featured && (
-                            <span className="bg-[var(--color-accent)] text-white text-xs font-bold px-3 py-1 rounded-full">
-                              Featured
-                            </span>
-                          )}
-                          <span className="bg-white/90 backdrop-blur-sm text-[var(--color-primary)] text-xs font-bold px-3 py-1 rounded-full">
-                            {product.category}
-                          </span>
-                        </div>
-
-                        {/* Quick Actions */}
-                        <div className="absolute top-4 right-4 transform translate-x-10 group-hover/product:translate-x-0 transition-transform duration-300">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedProduct(product);
-                              handleAddToCart();
-                            }}
-                            className="bg-white/90 backdrop-blur-sm text-[var(--color-primary)] p-2 rounded-full 
-                              hover:bg-[var(--color-accent)] hover:text-white transition-colors duration-300 mb-2 block"
-                            title="Add to Cart"
-                          >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-                              />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedProduct(product);
-                              handleBuyNow();
-                            }}
-                            className="bg-white/90 backdrop-blur-sm text-[var(--color-primary)] p-2 rounded-full 
-                              hover:bg-[var(--color-accent)] hover:text-white transition-colors duration-300 block"
-                            title="Buy Now"
-                          >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
-                              />
-                            </svg>
-                          </button>
-                        </div>
-
-                        <div
-                          className="absolute bottom-0 left-0 right-0 p-6 transform translate-y-4 
-                          group-hover/product:translate-y-0 transition-transform duration-300"
-                        >
-                          <h3 className="text-xl font-bold text-white mb-2">
-                            {product.title}
-                          </h3>
-                          <p className="text-white/90 text-sm line-clamp-2 mb-3">
-                            {product.description}
-                          </p>
-                          <div className="flex items-center justify-between">
-                            <p className="text-[var(--color-accent)] font-bold text-lg">
-                              {formatPrice(product.price)}
-                            </p>
-                            {product.inStock ? (
-                              <span className="text-green-400 text-sm bg-green-400/10 px-2 py-1 rounded-full">
-                                In Stock
-                              </span>
-                            ) : (
-                              <span className="text-red-400 text-sm bg-red-400/10 px-2 py-1 rounded-full">
-                                Out of Stock
+                          {/* Product Badges */}
+                          <div className="absolute top-4 left-4 flex flex-col gap-2">
+                            {product.featured && (
+                              <span className="bg-[var(--color-accent)] text-white text-xs font-bold px-3 py-1 rounded-full">
+                                Featured
                               </span>
                             )}
+                            <span className="bg-white/90 backdrop-blur-sm text-[var(--color-primary)] text-xs font-bold px-3 py-1 rounded-full">
+                              {product.category}
+                            </span>
                           </div>
 
-                          {/* Available Sizes/Colors Preview */}
-                          {(product.sizes || product.colors) && (
-                            <div className="flex gap-4 mt-3">
-                              {product.sizes && (
-                                <div className="flex items-center gap-1">
-                                  <span className="text-white/60 text-xs">
-                                    Sizes:
-                                  </span>
-                                  <div className="flex gap-1">
-                                    {product.sizes.slice(0, 3).map((size) => (
-                                      <span
-                                        key={size}
-                                        className="text-white text-xs bg-white/10 px-1.5 py-0.5 rounded"
-                                      >
-                                        {size}
-                                      </span>
-                                    ))}
-                                    {product.sizes.length > 3 && (
-                                      <span className="text-white text-xs bg-white/10 px-1.5 py-0.5 rounded">
-                                        +{product.sizes.length - 3}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
-                              {product.colors && (
-                                <div className="flex items-center gap-1">
-                                  <span className="text-white/60 text-xs">
-                                    Colors:
-                                  </span>
-                                  <div className="flex gap-1">
-                                    {product.colors.slice(0, 3).map((color) => (
-                                      <span
-                                        key={color}
-                                        className="text-white text-xs bg-white/10 px-1.5 py-0.5 rounded"
-                                      >
-                                        {color}
-                                      </span>
-                                    ))}
-                                    {product.colors.length > 3 && (
-                                      <span className="text-white text-xs bg-white/10 px-1.5 py-0.5 rounded">
-                                        +{product.colors.length - 3}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
+                          {/* Quick Actions */}
+                          <div className="absolute top-4 right-4 ">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedProduct(product);
+                              }}
+                              className="bg-white/90 backdrop-blur-sm text-[var(--color-primary)] p-2 rounded-full 
+                                hover:bg-[var(--color-accent)] hover:text-white transition-colors duration-300 mb-2 block"
+                              title="Add to Cart"
+                            >
+                              <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                                />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedProduct(product);
+                                handleBuyNow();
+                              }}
+                              className="bg-white/90 backdrop-blur-sm text-[var(--color-primary)] p-2 rounded-full 
+                                hover:bg-[var(--color-accent)] hover:text-white transition-colors duration-300 block"
+                              title="Buy Now"
+                            >
+                              <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+                                />
+                              </svg>
+                            </button>
+                          </div>
+
+                          <div
+                            className="absolute bottom-0 left-0 right-0 p-6 transform translate-y-4 
+                            group-hover/product:translate-y-0 transition-transform duration-300"
+                          >
+                            <h3 className="text-xl font-bold text-white mb-2">
+                              {product.title}
+                            </h3>
+                            <p className="text-white/90 text-sm line-clamp-2 mb-3">
+                              {product.description}
+                            </p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-[var(--color-accent)] font-bold text-lg">
+                                {formatPrice(product.price)}
+                              </p>
+                              {product.inStock ? (
+                                <span className="text-green-400 text-sm bg-green-400/10 px-2 py-1 rounded-full">
+                                  In Stock
+                                </span>
+                              ) : (
+                                <span className="text-red-400 text-sm bg-red-400/10 px-2 py-1 rounded-full">
+                                  Out of Stock
+                                </span>
                               )}
                             </div>
-                          )}
+
+                            {/* Available Sizes/Colors Preview */}
+                            {(product.sizes || product.colors) && (
+                              <div className="flex gap-4 mt-3">
+                                {product.sizes && (
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-white/60 text-xs">
+                                      Sizes:
+                                    </span>
+                                    <div className="flex gap-1">
+                                      {product.sizes.slice(0, 3).map((size) => (
+                                        <span
+                                          key={size}
+                                          className="text-white text-xs bg-white/10 px-1.5 py-0.5 rounded"
+                                        >
+                                          {size}
+                                        </span>
+                                      ))}
+                                      {product.sizes.length > 3 && (
+                                        <span className="text-white text-xs bg-white/10 px-1.5 py-0.5 rounded">
+                                          +{product.sizes.length - 3}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                                {product.colors && (
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-white/60 text-xs">
+                                      Colors:
+                                    </span>
+                                    <div className="flex gap-1">
+                                      {product.colors
+                                        .slice(0, 3)
+                                        .map((color) => (
+                                          <span
+                                            key={color}
+                                            className="text-white text-xs bg-white/10 px-1.5 py-0.5 rounded"
+                                          >
+                                            {color}
+                                          </span>
+                                        ))}
+                                      {product.colors.length > 3 && (
+                                        <span className="text-white text-xs bg-white/10 px-1.5 py-0.5 rounded">
+                                          +{product.colors.length - 3}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-            </div>
+                  ))}
+              </div>
+            )}
           </div>
         </section>
       )}

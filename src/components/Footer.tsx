@@ -237,11 +237,11 @@ const Footer = () => {
 
               <li>
                 <Link
-                  href="/accessories"
+                  href="/contact"
                   className="text-[var(--color-text-light)]/80 hover:text-[var(--color-accent)] transition-all duration-300 flex items-center group"
                 >
                   <span className="w-0 h-0.5 bg-[var(--color-accent)] mr-0 group-hover:w-2 group-hover:mr-2 transition-all duration-300"></span>
-                  Accessories
+                  Contact us
                 </Link>
               </li>
               <li>

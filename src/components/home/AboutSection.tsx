@@ -48,7 +48,7 @@ const AboutSection = ({ aboutRef }: AboutSectionProps) => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
           {/* Content Column */}
           <div className="animate-on-scroll" ref={contentRef}>
             <div className="bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-xl transform hover:scale-[1.02] transition-transform duration-300">
@@ -69,7 +69,7 @@ const AboutSection = ({ aboutRef }: AboutSectionProps) => {
               </p>
 
               {/* Stats Section */}
-              <div className="grid grid-cols-3 gap-4 my-8">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 my-8">
                 <div className="text-center p-4 bg-[var(--color-accent)]/10 rounded-lg">
                   <div className="text-3xl font-bold text-[var(--color-accent)] mb-1">
                     10+

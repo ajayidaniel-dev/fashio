@@ -94,7 +94,7 @@ const Navbar = ({ cartItems = [], onCartClick }: NavbarProps) => {
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[var(--color-accent)] transition-all duration-300 group-hover:w-full"></span>
             </Link>
             <Link
-              href="/shop"
+              href="/collections"
               className="px-6 py-2 bg-[var(--color-accent)] text-white rounded-full font-medium hover:bg-[var(--color-accent-light)] transform hover:scale-105 transition-all duration-300 shadow-md hover:shadow-lg"
             >
               Buy Now

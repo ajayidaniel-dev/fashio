@@ -112,7 +112,7 @@ const Testimonials = () => {
         {/* Testimonials Carousel */}
         <div className="relative">
           {/* Main Testimonial Display */}
-          <div className="relative h-[500px] md:h-[400px] overflow-hidden rounded-2xl shadow-2xl">
+          <div className="relative h-[550px] md:h-[400px] overflow-hidden rounded-2xl shadow-2xl">
             {testimonials.map((testimonial, index) => (
               <div
                 key={testimonial.id}
