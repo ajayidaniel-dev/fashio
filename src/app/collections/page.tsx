@@ -6,6 +6,8 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { collections } from "@/app/constant";
 import { useCurrency } from "@/context/CurrencyContext";
+import { useFlutterwave, closePaymentModal } from "flutterwave-react-v3";
+import toast from "react-hot-toast";
 // Define a Product type
 interface Product {
   id: number;
@@ -19,6 +21,8 @@ interface Product {
   sizes?: string[];
   colors?: string[];
   inStock?: boolean;
+  selectedSize?: string;
+  selectedColor?: string;
 }
 
 const CollectionsPage = () => {
@@ -36,19 +40,52 @@ const CollectionsPage = () => {
   const collectionsRef = useRef<HTMLDivElement>(null);
   const productsRef = useRef<HTMLDivElement>(null);
 
+  // Customer details state
+  const [customerName, setCustomerName] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [customerWhatsapp, setCustomerWhatsapp] = useState("");
+  const [deliveryDetails, setDeliveryDetails] = useState("");
+  const [showCustomerForm, setShowCustomerForm] = useState(false);
+
+  // Calculate total price in Naira
+  const totalPrice = cartItems.reduce((sum, item) => {
+    // Extract numeric price value
+    const numericPrice = Number(item.price.replace(/[^0-9.]/g, ""));
+
+    // Convert to Naira (assuming prices are in USD, multiply by Naira rate)
+    const nairaRate = 1630; // Naira conversion rate from USD
+    const priceInNaira = numericPrice * nairaRate;
+
+    return sum + priceInNaira;
+  }, 0);
+
+  // console.log(selectedCurrency);
   // WhatsApp number to send messages to (replace with your actual number)
   const whatsappNumber = "+2347030367949"; // Replace with your actual WhatsApp number
 
   // Function to send product info to WhatsApp
-  const sendToWhatsApp = (product: Product) => {
-    const message = `I'm interested in: ${product.title}%0A%0APrice: ${
-      product.price
-    }%0A%0ASize: ${selectedSize || "Not selected"}%0A%0AColor: ${
-      selectedColor || "Not selected"
-    }%0A%0AProduct Link: ${window.location.origin}/collections`;
-    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${message}`;
-    window.open(whatsappUrl, "_blank");
+
+  // Flutterwave Payment
+  const config = {
+    public_key: process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || "",
+    tx_ref: Date.now().toString(),
+    amount: 1000, // Use the total price in Naira
+    currency: "NGN",
+    payment_options:
+      "card,mobilemoney,ussd, account, banktransfer, opay, applepay, googlepay",
+    customer: {
+      email: customerEmail,
+      phone_number: customerWhatsapp,
+      name: customerName,
+    },
+    customizations: {
+      title: "Fashio",
+      description: "Payment for items in cart",
+      logo: "https://st2.depositphotos.com/4403291/7418/v/450/depositphotos_74189661-stock-illustration-online-shop-log.jpg",
+    },
   };
+
+  const handleFlutterPayment = useFlutterwave(config);
 
   // Animation on scroll
   useEffect(() => {
@@ -92,17 +129,26 @@ const CollectionsPage = () => {
   // Handle add to cart
   const handleAddToCart = () => {
     if (selectedProduct) {
-      setCartItems([...cartItems, selectedProduct]);
-      setIsModalOpen(false);
-      setIsCartOpen(true);
-    }
-  };
+      // Check if the product is already in the cart
+      const isAlreadyInCart = cartItems.some(
+        (item) => item.id === selectedProduct.id
+      );
 
-  // Handle buy now
-  const handleBuyNow = () => {
-    if (selectedProduct) {
-      sendToWhatsApp(selectedProduct);
-      setIsModalOpen(false);
+      if (!isAlreadyInCart) {
+        // Add the product with selected size and color
+        const productWithSelections = {
+          ...selectedProduct,
+          selectedSize: selectedSize || undefined,
+          selectedColor: selectedColor || undefined,
+        };
+        setCartItems([...cartItems, productWithSelections]);
+        setIsModalOpen(false);
+        setIsCartOpen(true);
+      } else {
+        // If already in cart, just show the cart
+        setIsModalOpen(false);
+        setIsCartOpen(true);
+      }
     }
   };
 
@@ -110,7 +156,13 @@ const CollectionsPage = () => {
   useEffect(() => {
     if (selectedProduct && !isModalOpen) {
       // This will run when a product is selected from the quick action button
-      handleAddToCart();
+      // Only add to cart if it's not already in the cart
+      const isAlreadyInCart = cartItems.some(
+        (item) => item.id === selectedProduct.id
+      );
+      if (!isAlreadyInCart) {
+        handleAddToCart();
+      }
     }
   }, [selectedProduct, isModalOpen]);
 
@@ -149,6 +201,143 @@ const CollectionsPage = () => {
       )
     ),
   ];
+  const message = cartItems.map((item) => {
+    let itemDetails = `${item.title} - ${item.price} \n`;
+    if (item.selectedSize) itemDetails += `Size: ${item.selectedSize} \n`;
+    if (item.selectedColor) itemDetails += `Color: ${item.selectedColor}`;
+    return itemDetails;
+  });
+  const handleSubmit = async () => {
+    const htmlTemplate = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>New Contact Form Submission</title>
+          <style>
+            body {
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              margin: 0;
+              padding: 0;
+              background-color: #f5f5f5;
+            }
+            .container {
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+              background-color: #ffffff;
+              border-radius: 10px;
+              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+            .header {
+              background: linear-gradient(135deg, #4f46e5, #7c3aed);
+              color: white;
+              padding: 20px;
+              border-radius: 10px 10px 0 0;
+              text-align: center;
+            }
+            .content {
+              padding: 20px;
+            }
+            .field {
+              margin-bottom: 15px;
+              padding: 10px;
+              background-color: #f8f9fa;
+              border-radius: 5px;
+            }
+            .label {
+              font-weight: bold;
+              color: #4f46e5;
+              margin-bottom: 5px;
+            }
+            .value {
+              color: #333;
+            }
+            .footer {
+              text-align: center;
+              padding: 20px;
+              color: #666;
+              font-size: 0.9em;
+              border-top: 1px solid #eee;
+            }
+            @media (max-width: 600px) {
+              .container {
+                margin: 10px;
+                padding: 10px;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>New Contact Form Submission</h1>
+            </div>
+            <div class="content">
+              <div class="field">
+                <div class="label">Customer Name</div>
+                <div class="value">${customerName}</div>
+              </div>
+              <div class="field">
+                <div class="label">Customer Email</div>
+                <div class="value">${customerEmail}</div>
+              </div>
+              <div class="field">
+                <div class="label">Whatsapp Number</div>
+                <div class="value">${customerWhatsapp}</div>
+              </div>
+              <div class="field">
+                <div class="label">Delivery Details</div>
+                <div class="value">${deliveryDetails}</div>
+              </div>
+              <div class="field">
+                <div class="label">Order Details</div>
+                <div class="value">${message}</div>
+              </div>
+            </div>
+            <div class="footer">
+              <p>This message was sent from your portfolio contact form</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    try {
+      const response = await fetch("https://techxmail.onrender.com/sendmail", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: customerName,
+          mail: `ajayidaniel.dev@gmail.com`,
+          subject: `${customerName} just placed an order for`,
+          html: htmlTemplate,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to send message");
+      }
+
+      toast.success("Message sent successfully");
+      setCustomerName("");
+      setCustomerEmail("");
+      setCustomerWhatsapp("");
+      setDeliveryDetails("");
+      setCartItems([]);
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    } catch (error) {
+      toast.error("Error sending message");
+      console.error("Error sending message:", error);
+    }
+  };
 
   return (
     <main className="min-h-screen ">
@@ -568,34 +757,7 @@ const CollectionsPage = () => {
                           {/* Quick Actions */}
                           <div className="absolute top-4 right-4 ">
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedProduct(product);
-                              }}
-                              className="bg-white/90 backdrop-blur-sm text-[var(--color-primary)] p-2 rounded-full 
-                                hover:bg-[var(--color-accent)] hover:text-white transition-colors duration-300 mb-2 block"
-                              title="Add to Cart"
-                            >
-                              <svg
-                                className="w-5 h-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth="2"
-                                  d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-                                />
-                              </svg>
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedProduct(product);
-                                handleBuyNow();
-                              }}
+                              onClick={() => handleProductClick(product)}
                               className="bg-white/90 backdrop-blur-sm text-[var(--color-primary)] p-2 rounded-full 
                                 hover:bg-[var(--color-accent)] hover:text-white transition-colors duration-300 block"
                               title="Buy Now"
@@ -794,16 +956,11 @@ const CollectionsPage = () => {
 
                   <div className="flex gap-4">
                     <button
+                      disabled={!selectedSize || !selectedColor}
                       onClick={handleAddToCart}
                       className="flex-1 bg-[var(--color-secondary)] text-white py-3 rounded-full hover:bg-[var(--color-secondary-dark)] transition-colors duration-300"
                     >
                       Add to Cart
-                    </button>
-                    <button
-                      onClick={handleBuyNow}
-                      className="flex-1 bg-[var(--color-cta)] text-white py-3 rounded-full hover:bg-[var(--color-cta-dark)] transition-colors duration-300"
-                    >
-                      Buy Now
                     </button>
                   </div>
                 </div>
@@ -897,6 +1054,19 @@ const CollectionsPage = () => {
                           <p className="text-sm text-[var(--color-text-secondary)] mb-1">
                             {formatPrice(item.price)}
                           </p>
+                          {(item.selectedSize || item.selectedColor) && (
+                            <div className="text-sm text-[var(--color-text-secondary)] mb-2">
+                              {item.selectedSize && (
+                                <span>Size: {item.selectedSize}</span>
+                              )}
+                              {item.selectedSize && item.selectedColor && (
+                                <span> • </span>
+                              )}
+                              {item.selectedColor && (
+                                <span>Color: {item.selectedColor}</span>
+                              )}
+                            </div>
+                          )}
                           <div className="flex justify-between items-center">
                             <button
                               onClick={() => {
@@ -908,12 +1078,6 @@ const CollectionsPage = () => {
                             >
                               Remove
                             </button>
-                            <button
-                              onClick={() => sendToWhatsApp(item)}
-                              className="text-sm bg-[var(--color-accent)] text-white px-3 py-1 rounded-md hover:bg-[var(--color-accent-light)] transition-colors"
-                            >
-                              Checkout
-                            </button>
                           </div>
                         </div>
                       </div>
@@ -923,30 +1087,201 @@ const CollectionsPage = () => {
                   <div className="mt-6 pt-6 border-t border-gray-200">
                     <div className="flex justify-between items-center mb-4">
                       <span className="font-semibold text-[var(--color-primary)]">
-                        Total
+                        Total in Naira: ₦
+                        {totalPrice.toLocaleString("en-US", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
                       </span>
                       <span className="font-bold text-[var(--color-primary)]">
                         {cartItems.length}{" "}
                         {cartItems.length === 1 ? "item" : "items"}
                       </span>
                     </div>
-                    <button
-                      onClick={() => {
-                        // Send all items to WhatsApp
-                        const message = cartItems
-                          .map((item) => `${item.title} - ${item.price}`)
-                          .join("%0A%0A");
-                        const whatsappUrl = `https://wa.me/${whatsappNumber}?text=I'm interested in the following items:%0A%0A${message}`;
-                        window.open(whatsappUrl, "_blank");
-                        setIsCartOpen(false);
-                      }}
-                      className="w-full bg-[var(--color-accent)] text-white py-3 rounded-lg font-medium hover:bg-[var(--color-accent-light)] transition-colors"
-                    >
-                      Checkout All
-                    </button>
+                    <div className="flex flex-col justify-between items-center gap-4 w-full">
+                      <button
+                        onClick={() => {
+                          setShowCustomerForm(true);
+                        }}
+                        className="w-full  bg-[var(--color-accent)] text-white py-3 rounded-lg font-medium hover:bg-[var(--color-accent-light)] transition-colors"
+                      >
+                        Checkout
+                      </button>
+                    </div>
                   </div>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Customer Details Form Modal */}
+      {showCustomerForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-[var(--color-primary)]">
+                Customer Details
+              </h3>
+              <button
+                onClick={() => setShowCustomerForm(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg placeholder:text-[var(--color-text-secondary)] placeholder:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                  placeholder="Enter your full name"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  value={customerEmail}
+                  onChange={(e) => setCustomerEmail(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg placeholder:text-[var(--color-text-secondary)] placeholder:text-sm  focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                  placeholder="Enter your email address"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  WhatsApp Number
+                </label>
+                <input
+                  type="tel"
+                  value={customerWhatsapp}
+                  onChange={(e) => setCustomerWhatsapp(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg placeholder:text-[var(--color-text-secondary)] placeholder:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                  placeholder="Enter your WhatsApp number"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Delivery Details
+                </label>
+                <textarea
+                  value={deliveryDetails}
+                  onChange={(e) => setDeliveryDetails(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg placeholder:text-[var(--color-text-secondary)] placeholder:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                  placeholder="Enter your delivery address and any special instructions"
+                  rows={3}
+                  required
+                />
+              </div>
+
+              <div className="pt-4">
+                <button
+                  onClick={() => {
+                    // Validate form
+                    if (
+                      !customerName ||
+                      !customerEmail ||
+                      !customerWhatsapp ||
+                      !deliveryDetails
+                    ) {
+                      toast.error("Please fill in all fields");
+                      return;
+                    }
+
+                    // Send all items to WhatsApp with customer details
+                    const message = cartItems
+                      .map((item) => {
+                        let itemDetails = `${item.title} - ${item.price}`;
+                        if (item.selectedSize)
+                          itemDetails += `\nSize: ${item.selectedSize}`;
+                        if (item.selectedColor)
+                          itemDetails += `\nColor: ${item.selectedColor}`;
+                        return itemDetails;
+                      })
+                      .join("%0A%0A");
+
+                    const customerInfo = `%0A%0ACustomer Details:%0A%0AName: ${customerName}%0AEmail: ${customerEmail}%0AWhatsApp: ${customerWhatsapp}%0A%0ADelivery Details:%0A${deliveryDetails}%0A%0ATotal in Naira: ₦${totalPrice.toLocaleString(
+                      "en-US",
+                      {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      }
+                    )}`;
+
+                    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=I'm interested in the following items:%0A%0A${message}${customerInfo}`;
+                    window.open(whatsappUrl, "_blank");
+                    setShowCustomerForm(false);
+                    setIsCartOpen(false);
+                  }}
+                  className="w-full border-2 border-[var(--color-accent)] text-[var(--color-accent)] py-3 rounded-lg font-medium hover:border-[var(--color-accent-light)] transition-colors"
+                >
+                  Send to WhatsApp
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (
+                      !customerName ||
+                      !customerEmail ||
+                      !customerWhatsapp ||
+                      !deliveryDetails
+                    ) {
+                      toast.error("Please fill in all fields");
+                      return;
+                    }
+
+                    handleFlutterPayment({
+                      callback: (response) => {
+                        console.log(response);
+                        if (
+                          response.status === "successful" ||
+                          response.status === "completed"
+                        ) {
+                          toast.success("Payment successful");
+
+                          handleSubmit();
+                        } else {
+                          toast.error("Payment failed");
+                        }
+                        closePaymentModal(); // this will close the modal programmatically
+                      },
+                      onClose: () => {
+                        toast.error("Payment closed");
+                      },
+                    });
+                  }}
+                  className="w-full bg-[var(--color-accent)] mt-6 text-white py-3 rounded-lg font-medium hover:bg-[var(--color-accent-light)] transition-colors"
+                >
+                  Buy Now
+                </button>
+              </div>
             </div>
           </div>
         </div>

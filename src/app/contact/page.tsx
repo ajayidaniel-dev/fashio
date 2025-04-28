@@ -13,42 +13,152 @@ export default function ContactPage() {
     message: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
-  const [submitError, setSubmitError] = useState("");
+  const [submitStatus, setSubmitStatus] = useState<
+    "idle" | "success" | "error"
+  >("idle");
 
-  const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setSubmitError("");
+    setSubmitStatus("idle");
 
-    // Simulate form submission
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setSubmitSuccess(true);
-      setFormData({
-        name: "",
-        email: "",
-        subject: "",
-        message: "",
+    const htmlTemplate = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>New Contact Form Submission</title>
+          <style>
+            body {
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              margin: 0;
+              padding: 0;
+              background-color: #f5f5f5;
+            }
+            .container {
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+              background-color: #ffffff;
+              border-radius: 10px;
+              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+            .header {
+              background: linear-gradient(135deg, #4f46e5, #7c3aed);
+              color: white;
+              padding: 20px;
+              border-radius: 10px 10px 0 0;
+              text-align: center;
+            }
+            .content {
+              padding: 20px;
+            }
+            .field {
+              margin-bottom: 15px;
+              padding: 10px;
+              background-color: #f8f9fa;
+              border-radius: 5px;
+            }
+            .label {
+              font-weight: bold;
+              color: #4f46e5;
+              margin-bottom: 5px;
+            }
+            .value {
+              color: #333;
+            }
+            .footer {
+              text-align: center;
+              padding: 20px;
+              color: #666;
+              font-size: 0.9em;
+              border-top: 1px solid #eee;
+            }
+            @media (max-width: 600px) {
+              .container {
+                margin: 10px;
+                padding: 10px;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>New Contact Form Submission</h1>
+            </div>
+            <div class="content">
+              <div class="field">
+                <div class="label">Name</div>
+                <div class="value">${formData.name}</div>
+              </div>
+              <div class="field">
+                <div class="label">Email</div>
+                <div class="value">${formData.email}</div>
+              </div>
+              <div class="field">
+                <div class="label">Subject</div>
+                <div class="value">${formData.subject}</div>
+              </div>
+              <div class="field">
+                <div class="label">Message</div>
+                <div class="value">${formData.message.replace(
+                  /\n/g,
+                  "<br>"
+                )}</div>
+              </div>
+            </div>
+            <div class="footer">
+              <p>This message was sent from your portfolio contact form</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    try {
+      const response = await fetch("https://techxmail.onrender.com/sendmail", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          mail: `ajayidaniel.dev@gmail.com`,
+          subject: formData.subject,
+          text: formData.message,
+          html: htmlTemplate,
+        }),
       });
 
-      // Reset success message after 5 seconds
+      if (!response.ok) {
+        throw new Error("Failed to send message");
+      }
+
+      setSubmitStatus("success");
       setTimeout(() => {
-        setSubmitSuccess(false);
-      }, 5000);
-    }, 1500);
+        setSubmitStatus("idle");
+      }, 3000);
+      setFormData({ name: "", email: "", subject: "", message: "" });
+    } catch (error) {
+      setSubmitStatus("error");
+      setTimeout(() => {
+        setSubmitStatus("idle");
+      }, 3000);
+      console.error("Error sending message:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   return (
@@ -285,7 +395,7 @@ export default function ContactPage() {
                 Send Us a Message
               </h2>
 
-              {submitSuccess ? (
+              {submitStatus === "success" ? (
                 <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-6">
                   <p className="font-medium">Thank you for your message!</p>
                   <p className="text-sm">
@@ -294,10 +404,9 @@ export default function ContactPage() {
                 </div>
               ) : null}
 
-              {submitError ? (
+              {submitStatus === "error" ? (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
                   <p className="font-medium">Error submitting form</p>
-                  <p className="text-sm">{submitError}</p>
                 </div>
               ) : null}
 
@@ -317,7 +426,7 @@ export default function ContactPage() {
                       value={formData.name}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all duration-300 bg-white text-[var(--color-text)]"
+                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all duration-300 bg-white text-[var(--color-text)]  placeholder:text-[var(--color-text-secondary)]"
                       placeholder="John Doe"
                     />
                   </div>
@@ -336,7 +445,7 @@ export default function ContactPage() {
                       value={formData.email}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all duration-300 bg-white text-[var(--color-text)]"
+                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all duration-300 bg-white text-[var(--color-text)]  placeholder:text-[var(--color-text-secondary)]"
                       placeholder="john@example.com"
                     />
                   </div>
@@ -356,7 +465,7 @@ export default function ContactPage() {
                     value={formData.subject}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all duration-300 bg-white text-[var(--color-text)]"
+                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all duration-300 bg-white text-[var(--color-text)]  placeholder:text-[var(--color-text-secondary)]"
                     placeholder="How can we help you?"
                   />
                 </div>
@@ -375,7 +484,7 @@ export default function ContactPage() {
                     onChange={handleChange}
                     required
                     rows={6}
-                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all duration-300 bg-white text-[var(--color-text)]"
+                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all duration-300 bg-white text-[var(--color-text)]  placeholder:text-[var(--color-text-secondary)]"
                     placeholder="Your message here..."
                   ></textarea>
                 </div>

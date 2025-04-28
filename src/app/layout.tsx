@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Sora } from "next/font/google";
 import "./globals.css";
 import { CurrencyProvider } from "@/context/CurrencyContext";
-
+import ThemeProvider from "@/components/utils/ThemeProvider";
 const sora = Sora({
   variable: "--font-sora",
   subsets: ["latin"],
@@ -21,6 +21,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${sora.variable}  antialiased`}>
+        <ThemeProvider />
         <CurrencyProvider>{children}</CurrencyProvider>
       </body>
     </html>
